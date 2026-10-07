@@ -413,16 +413,29 @@ function wake(){if(!sound)return;if(!AC){const C=window.AudioContext||window.web
 function tone(f,dur,type,vol,slide,delay){if(!sound||!AC||AC.state!=="running")return;const t=AC.currentTime+(delay||0),o=AC.createOscillator(),g=AC.createGain();
   o.type=type||"sine";o.frequency.setValueAtTime(f,t);if(slide)o.frequency.exponentialRampToValueAtTime(slide,t+dur);
   g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(vol,t+.008);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(g);g.connect(master);o.start(t);o.stop(t+dur+.03)}
-// A synthesised meow: a buzzy voice whose pitch and mouth shape (two moving filters) change over the call.
-// Happy calls are short and rise; sad ones are long, low, wavering and fall away.
+// A synthesised kitten meow. A soft-edged voice (not a harsh buzz) is shaped by two "mouth" filters that open and close
+// like m-e-ow, with a little breath on top. Happy calls are short, high and rise; sad ones are longer, waver and fall away.
+let VOICE=null,BREATH=null;
 function meow(fa,fb,fc,dur,vol,delay,sad){if(!sound||!AC||AC.state!=="running")return;
-  const t=AC.currentTime+(delay||0),o=AC.createOscillator(),g=AC.createGain(),m1=AC.createBiquadFilter(),m2=AC.createBiquadFilter(),pk=dur*(sad?.22:.4);
-  o.type="sawtooth";o.frequency.setValueAtTime(fa,t);o.frequency.linearRampToValueAtTime(fb,t+pk);o.frequency.linearRampToValueAtTime(fc,t+dur);
-  if(sad){const l=AC.createOscillator(),lg=AC.createGain();l.frequency.value=5.5;lg.gain.value=fb*.035;l.connect(lg);lg.connect(o.frequency);l.start(t+dur*.3);l.stop(t+dur)}
-  m1.type="bandpass";m1.Q.value=4;m1.frequency.setValueAtTime(800,t);m1.frequency.linearRampToValueAtTime(sad?1400:2100,t+pk);m1.frequency.linearRampToValueAtTime(sad?520:1200,t+dur);
-  m2.type="bandpass";m2.Q.value=7;m2.frequency.setValueAtTime(2500,t);m2.frequency.linearRampToValueAtTime(sad?2800:3400,t+pk);m2.frequency.linearRampToValueAtTime(sad?1800:2600,t+dur);
-  g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(vol,t+dur*.14);g.gain.setValueAtTime(vol,t+dur*(sad?.45:.65));g.gain.exponentialRampToValueAtTime(.0001,t+dur);
-  o.connect(m1);o.connect(m2);m1.connect(g);m2.connect(g);g.connect(master);o.start(t);o.stop(t+dur+.05)}
+  if(!VOICE){const n=12,re=new Float32Array(n),im=new Float32Array(n);for(let k=1;k<n;k++)im[k]=1/Math.pow(k,1.25);VOICE=AC.createPeriodicWave(re,im);
+    BREATH=AC.createBuffer(1,AC.sampleRate,AC.sampleRate);const d=BREATH.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
+  const t=AC.currentTime+(delay||0),pk=dur*(sad?.25:.38),o=AC.createOscillator(),o2=AC.createOscillator(),g=AC.createGain(),m1=AC.createBiquadFilter(),m2=AC.createBiquadFilter(),top=AC.createBiquadFilter();
+  for(const q of[o,o2]){q.setPeriodicWave(VOICE);q.frequency.setValueAtTime(fa,t);q.frequency.exponentialRampToValueAtTime(fb,t+pk);q.frequency.exponentialRampToValueAtTime(fc,t+dur)}
+  o2.detune.value=9; // two slightly detuned voices sound less electronic
+  const l=AC.createOscillator(),lg=AC.createGain();l.frequency.value=sad?5:7.5;lg.gain.setValueAtTime(0,t);lg.gain.linearRampToValueAtTime(fb*(sad?.03:.012),t+dur*.7);l.connect(lg);lg.connect(o.frequency);lg.connect(o2.frequency);l.start(t);l.stop(t+dur+.05);
+  // mouth: closed "m" -> open "e/a" -> rounded "ow"
+  m1.type="bandpass";m1.Q.value=3;m1.frequency.setValueAtTime(600,t);m1.frequency.linearRampToValueAtTime(sad?1150:1500,t+pk);m1.frequency.linearRampToValueAtTime(sad?600:900,t+dur);
+  m2.type="bandpass";m2.Q.value=5;m2.frequency.setValueAtTime(2200,t);m2.frequency.linearRampToValueAtTime(sad?2900:3500,t+pk);m2.frequency.linearRampToValueAtTime(sad?1700:2400,t+dur);
+  top.type="lowpass";top.frequency.value=5200;
+  g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(vol*.5,t+dur*.1);g.gain.linearRampToValueAtTime(vol,t+pk);g.gain.linearRampToValueAtTime(vol*.6,t+dur*.75);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  const mix=AC.createGain();mix.gain.value=.5;o.connect(mix);o2.connect(mix);mix.connect(m1);mix.connect(m2);m1.connect(top);m2.connect(top);top.connect(g);
+  const n=AC.createBufferSource(),nf=AC.createBiquadFilter(),ng=AC.createGain();n.buffer=BREATH;nf.type="bandpass";nf.frequency.value=3200;nf.Q.value=1.2;ng.gain.value=sad?.1:.06;n.connect(nf);nf.connect(ng);ng.connect(g);n.start(t);n.stop(t+dur+.05);
+  g.connect(master);o.start(t);o2.start(t);o.stop(t+dur+.05);o2.stop(t+dur+.05)}
+// A short rising trill, the "mrrp" a cat gives when it is pleased.
+function trill(fa,fb,dur,vol,delay){if(!sound||!AC||AC.state!=="running")return;meow(fa,fb,fb*.96,dur,vol,delay);
+  const t=AC.currentTime+(delay||0),o=AC.createOscillator(),g=AC.createGain(),l=AC.createOscillator(),lg=AC.createGain(),f=AC.createBiquadFilter();o.type="triangle";o.frequency.setValueAtTime(fa*.5,t);o.frequency.exponentialRampToValueAtTime(fb*.5,t+dur);
+  f.type="bandpass";f.frequency.value=1200;f.Q.value=1.5;l.frequency.value=32;lg.gain.value=vol*.35;g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(vol*.35,t+dur*.2);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  l.connect(lg);lg.connect(g.gain);o.connect(f);f.connect(g);g.connect(master);o.start(t);l.start(t);o.stop(t+dur+.05);l.stop(t+dur+.05)}
 function purr(dur,vol,delay){if(!sound||!AC||AC.state!=="running")return;const t=AC.currentTime+(delay||0),o=AC.createOscillator(),g=AC.createGain(),l=AC.createOscillator(),lg=AC.createGain(),f=AC.createBiquadFilter();
   o.type="sawtooth";o.frequency.value=52;f.type="lowpass";f.frequency.value=320;l.type="sine";l.frequency.value=24;lg.gain.value=vol*.5;g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(vol*.5,t+.15);g.gain.setValueAtTime(vol*.5,t+dur-.25);g.gain.linearRampToValueAtTime(.0001,t+dur);
   l.connect(lg);lg.connect(g.gain);o.connect(f);f.connect(g);g.connect(master);o.start(t);l.start(t);o.stop(t+dur+.05);l.stop(t+dur+.05)}
@@ -436,9 +449,9 @@ const sfx={
   no(){buzz([18,40,18]);tone(150,.1,"square",.05);tone(120,.12,"square",.05,null,.09)},
   undo(){tone(520,.1,"sine",.1,330)},
   win(){buzz([20,50,20,50,60]);[523,659,784,1047,1319].forEach((f,i)=>tone(f,.28,"triangle",.16,null,i*.09))},
-  happy(){meow(540,860,720,.26,.9,.5);meow(620,1010,860,.3,.9,.86);purr(1.3,.5,1.25)}, // two bright chirps, then a purr
-  mew(){meow(600,640,430,.3,.6,.05,true)}, // a short worried mew for one lost heart
-  sad(){meow(500,560,290,1.0,.9,.25,true)}, // one long, falling meow when the hearts run out
+  happy(){trill(620,1150,.2,.8,.5);meow(760,1240,980,.3,.9,.8);meow(840,1380,1100,.26,.85,1.2);purr(1.4,.5,1.55)}, // a pleased trill, two bright kitten meows, then a purr
+  mew(){meow(980,1020,700,.32,.65,.05,true)}, // a small, worried mew for one lost heart
+  sad(){meow(900,940,520,.85,.9,.25,true);meow(760,780,480,.5,.5,1.25,true)}, // a long, falling kitten cry and a quieter whimper when the hearts run out
   coin(){tone(1320,.08,"triangle",.1);tone(1760,.14,"triangle",.1,null,.07)},
   light(){buzz(10);tone(988,.18,"sine",.14);tone(1480,.26,"sine",.1,null,.08)},
   fail(){buzz([60,50,60]);tone(392,.3,"sawtooth",.07,196);tone(294,.45,"sawtooth",.07,110,.22)}
@@ -928,7 +941,7 @@ if(hot&&hot.ready)hot.ready(start);else start(hot&&hot.data||{});
 <script>
 // Home-screen app plumbing: offline support, and picking up new versions without re-adding the app.
 (function(){
-  var V="20261008-000336",waiting=false;
+  var V="20261008-000720",waiting=false;
   if("serviceWorker" in navigator)window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})});
   function onMenu(){try{return !window.__tessera||window.__tessera.state().view==="menu"}catch(e){return true}}
   function check(){
