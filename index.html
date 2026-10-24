@@ -1340,10 +1340,10 @@ document.addEventListener("visibilitychange",()=>{if(document.hidden)save()});
 function start(data){
   let sv=data&&data.idx!==undefined?data:null;
   if(!sv){try{sv=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){sv=null}}
-  if(!sv){try{const o=JSON.parse(localStorage.getItem("tessera-loop-save-15")||"null");if(o&&o.v===1)sv={v:1,speed:o.speed,auto:o.auto,sound:o.sound,vib:o.vib,lang:o.lang,coins:o.coins,lives:o.lives,reach:149,idx:49,tutDone:true}}catch(e){}}
+  if(!sv){try{const o=JSON.parse(localStorage.getItem("tessera-loop-save-15")||"null");if(o&&o.v===1)sv={v:1,speed:o.speed,auto:o.auto,sound:o.sound,vib:o.vib,lang:o.lang,coins:o.coins,lives:o.lives,reach:150,idx:49,tutDone:true}}catch(e){}}
   readTheme();
   try{const nl=(navigator.language||"en").slice(0,2).toLowerCase();if(I18N[nl])lang=nl}catch(e){}
-  if(sv&&sv.v===1){setSpeed(sv.speed||1);setAuto(sv.auto!==false);sound=sv.sound!==false;syncSnd();vibOn=sv.vib!==false;cleared=sv.cleared||{};lang=sv.lang||lang;coins=sv.coins>=0?sv.coins:20;lives=sv.lives>0?Math.min(MAXL,sv.lives):MAXL;reach=Math.max(149,sv.reach||0);while(reach<LEVELS.length-1&&cleared[LEVELS[reach].name])reach++;tutDone=!!sv.tutDone;load(Math.min(sv.idx||0,reach),sv.snap)}else{reach=149;load(0)}
+  if(sv&&sv.v===1){setSpeed(sv.speed||1);setAuto(sv.auto!==false);sound=sv.sound!==false;syncSnd();vibOn=sv.vib!==false;cleared=sv.cleared||{};lang=sv.lang||lang;coins=sv.coins>=0?sv.coins:20;lives=sv.lives>0?Math.min(MAXL,sv.lives):MAXL;reach=Math.max(150,sv.reach||0);while(reach<LEVELS.length-1&&cleared[LEVELS[reach].name])reach++;tutDone=!!sv.tutDone;load(Math.min(sv.idx||0,reach),sv.snap)}else{reach=150;load(0)}
   setLang(lang,true);show("menu");requestAnimationFrame(tick)}
 const hot=window.claude&&window.claude.hot;
 if(hot&&hot.snapshot)hot.snapshot(saveObj);
@@ -1353,7 +1353,7 @@ if(hot&&hot.ready)hot.ready(start);else start(hot&&hot.data||{});
 <script>
 // Home-screen app plumbing: offline support, and picking up new versions without re-adding the app.
 (function(){
-  var V="20261024-165505",waiting=false;
+  var V="20261024-165733",waiting=false;
   if("serviceWorker" in navigator)window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})});
   function onMenu(){try{return !window.__tessera||window.__tessera.state().view==="menu"}catch(e){return true}}
   function check(){
